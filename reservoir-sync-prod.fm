@@ -49,7 +49,6 @@ endm)
    sort Hosestatus . 
    ops left right : -> Hosestatus [ctor] .
    op Hstate : Hosestatus Nat -> State [ctor] . 
-
 endm)
 
 (mod TANKSANDHOSE is
@@ -100,10 +99,7 @@ endm)
 
   strat atemporal : @ State . 
   sd atemporal := (L_ok_to_empty | L_empty_to_ok | R_ok_to_empty | R_empty_to_ok | move_left | move_right)+ .
-
-  strat advanceclock : @ State .
-  sd advanceclock := tick .
-  
+ 
   strat evolve : @ State .
   sd evolve := (atemporal ? (atemporal)* : tick)+ . 
 endsm)
