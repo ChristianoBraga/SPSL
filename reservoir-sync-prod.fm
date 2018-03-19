@@ -1,0 +1,112 @@
+(mod TANKLEFT is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including NAT .
+   --- Create State for the tank: < OK , 20 , 5 >
+   sort Tankstatus . 
+   ops ok empty : -> Tankstatus [ctor] .
+   op Lstate : Tankstatus Nat Nat Nat -> State [ctor] . 
+
+   --- Variables for the tank
+   vars X LL R : Nat .  
+
+   crl [L_ok_to_empty] : Lstate(ok, X, LL, R) => Lstate(empty, X, LL, R) if ( X < LL ) .
+   crl [L_empty_to_ok] : Lstate(empty, X, LL, R) => Lstate(ok, X, LL, R) if ( X >= LL ) .
+
+endm)
+
+(mod TANKRIGHT is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including NAT .
+   --- Create State for the tank: < OK , 20 , 5 >
+   sort Tankstatus . 
+   ops ok empty : -> Tankstatus [ctor] .
+   op Rstate : Tankstatus Nat Nat Nat -> State [ctor] . 
+
+   --- Variables for the tank
+   vars X LL R : Nat .  
+
+   crl [R_ok_to_empty] : Rstate(ok, X, LL, R) => Rstate(empty, X, LL, R) if ( X < LL ) .
+   crl [R_empty_to_ok] : Rstate(empty, X, LL, R) => Rstate(ok, X, LL, R) if ( X >= LL ) .
+
+endm)
+
+(mod TANKS is
+  pr TANKLEFT || TANKRIGHT . 
+
+  --- Check if tanks ever get to empty at the same time
+  op safe : -> Prop .
+  vars XL LLL RL XR LLR RR W : Nat .
+
+  eq < Lstate(empty, XL, LLL, RL) , Rstate(empty, XR , LLR, RR) > |= safe = false . 
+  eq S:State |= P:Prop = true [owise] .
+
+endm)
+
+(mod HOSE is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including NAT .
+ 
+   sort Hosestatus . 
+   ops left right : -> Hosestatus [ctor] .
+   op Hstate : Hosestatus Nat -> State [ctor] . 
+
+endm)
+
+(mod TANKSANDHOSE is
+    pr TANKS || HOSE . 
+    including SATISFACTION .  --- declares State, Prop, and |=
+    including NAT . 
+    --- Full system controlling the Hose Movement
+    vars XL LLL RL XR LLR RR W : Nat .
+    vars leftstatus rightstatus : Tankstatus .
+    rl [move_left] : < < Lstate(empty, XL, LLL, RL) , Rstate(ok, XR , LLR, RR) > , Hstate(right, W) > =>
+                     < < Lstate(empty, XL, LLL, RL) , Rstate(ok, XR , LLR, RR) > , Hstate(left, W) > .
+
+    rl [move_right] : < < Lstate(ok, XL, LLL, RL) , Rstate(empty, XR , LLR, RR) > , Hstate(left, W) > => 
+                      < < Lstate(ok, XL, LLL, RL) , Rstate(empty, XR , LLR, RR) > , Hstate(right, W) > .
+
+
+    rl [tick] : < < Lstate(leftstatus, XL, LLL, RL) , Rstate(rightstatus, XR , LLR, RR) > , Hstate(left, W) > => 
+                      < < Lstate(leftstatus, sd(XL + W, RL), LLL, RL) , Rstate(rightstatus, sd(XR, RR), LLR, RR) > , Hstate(left, W) > .
+
+    rl [tick] : < < Lstate(leftstatus, XL, LLL, RL) , Rstate(rightstatus, XR , LLR, RR) > , Hstate(right, W) > => 
+                < < Lstate(leftstatus, sd(XL,RL), LLL, RL) , Rstate(rightstatus, sd(XR + W, RR) , LLR, RR) > , Hstate(right, W) > .
+endm)
+
+(mod CLOCK is
+   including SATISFACTION .  --- declares State, Prop, and |=.
+   including NAT .
+   subsort Nat < State .
+   var ClockCounter : Nat .
+   rl [tick] : ClockCounter => ClockCounter + 1 .
+
+  --- Check if tanks ever get to empty at the same time
+  op before10 : -> Prop .
+  vars XL LLL RL XR LLR RR W : Nat .
+
+  ceq ClockCounter |= before10 = true if ClockCounter < 2 . 
+  eq S:State |= P:Prop = false [owise] .
+
+endm)
+
+(mod CLOCKEDTANKANDHOSE is
+    pr TANKSANDHOSE || CLOCK .
+
+    op init : -> State .
+    eq init = < < < Lstate(ok, 3, 2, 1) , Rstate(ok, 3, 2, 1)> , Hstate(right, 2) > , 0 >  .
+endm)
+
+(smod CLOCKETANKANDHOSE-STRAT is
+
+  strat atemporal : @ State . 
+  sd atemporal := (L_ok_to_empty | L_empty_to_ok | R_ok_to_empty | R_empty_to_ok | move_left | move_right)+ .
+
+  strat advanceclock : @ State .
+  sd advanceclock := tick .
+  
+  strat evolve : @ State .
+  sd evolve := (atemporal ? (atemporal)* : tick)+ . 
+endsm)
+
+(srew init using evolve .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)    
+
