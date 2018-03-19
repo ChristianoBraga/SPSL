@@ -2,7 +2,7 @@
 Pushout of the Synchrnous Product and Strategy Language for Maude specifications.
 
 * Requires Maude 2.7.1
-* Command line: load full-maude.maude and the model-checker.maude before loading syncprod+strat.maude.
+* Command line: load `full-maude.maude` and `model-checker.maude` before loading `syncprod+strat.maude`.
 
 ## Copyright
 * [Synchronous product Full Maude extension](http://maude.sip.ucm.es/syncprod) developed by Óscar Martín Sánchez, José Alberto Verdejo and Narciso Martí-Oliet.
