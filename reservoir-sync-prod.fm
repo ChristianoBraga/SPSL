@@ -1,3 +1,7 @@
+--- Authors: André Metelo and Christiano Braga
+--- Universidade Federal Fluminense
+--- March 2018
+
 (mod TANKLEFT is 
    including SATISFACTION .  --- declares State, Prop, and |=
    including NAT .

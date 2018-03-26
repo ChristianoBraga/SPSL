@@ -15,6 +15,9 @@
   http://github.com/ChristianoBraga/SPSL
 )
 
+load full-maude
+load model-checker
+
 *** SYNCHRONOUS PRODUCT FULL MAUDE EXTENSION
 *** BEGIN
     
