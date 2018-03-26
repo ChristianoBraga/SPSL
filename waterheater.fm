@@ -1,0 +1,104 @@
+--- Authors: André Metelo and Christiano Braga
+--- Universidade Federal Fluminense
+--- March 2018
+
+(mod WATER is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including FLOAT .
+   --- Create State for the Water: < Temp > - Justs Temperature
+   op Waterstate : Float -> State [ctor] . 
+endm)
+
+(mod SENSOR is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including FLOAT .
+   --- Create State for the sensor: < state , LOW , HIGH >
+   sort Sensorstatus . 
+   ops ok low high : -> Sensorstatus [ctor] .
+   op Sensorstate : Sensorstatus Float Float -> State [ctor] . 
+endm)
+
+(mod WATERSENSOR is
+   pr WATER || SENSOR . 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including FLOAT .
+ 
+   vars WT SLow SHigh : Float .
+
+   --- Rules to change sensor status based on Water Temperature
+   crl [ok_to_low] : < Waterstate(WT) , Sensorstate(ok, SLow, SHigh) > => 
+		     < Waterstate(WT) , Sensorstate(low, SLow, SHigh) >
+		if (WT < SLow) . 
+
+   crl [ok_to_high] : < Waterstate(WT) , Sensorstate(ok, SLow, SHigh) > => 
+		      < Waterstate(WT) , Sensorstate(high, SLow, SHigh) >
+		if (WT > SHigh) . 
+
+   crl [low_to_ok] : < Waterstate(WT) , Sensorstate(low, SLow, SHigh) > => 
+		     < Waterstate(WT) , Sensorstate(ok, SLow, SHigh) >
+		if (WT >= SLow) . 
+
+   crl [high_to_ok] : < Waterstate(WT) , Sensorstate(high, SLow, SHigh) > => 
+		      < Waterstate(WT) , Sensorstate(ok, SLow, SHigh) >
+		if (WT <= SHigh) . 
+endm)
+
+(mod BURNER is 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including FLOAT .
+ 
+   --- Create State for the burner: < On/Off , Delta Heat per tick, Delta Cooldown per tick>
+   sort Burnerstatus . 
+   ops on off : -> Burnerstatus [ctor] .
+   op Burnerstate : Burnerstatus Float Float -> State [ctor] . 
+
+   vars DH DC : Float .
+
+   --- If sensor indicates that temperature changed range, we change status of the Burner
+   --- accordingly.
+   rl [ok_to_low] : Burnerstate(off, DC, DH) => Burnerstate(on, DC, DH) .
+
+   rl [ok_to_high] : Burnerstate(on, DC, DH) => Burnerstate(off, DC, DH) .
+endm)
+
+(mod WATERSENSORBURNER is
+   pr WATERSENSOR || BURNER . 
+   including SATISFACTION .  --- declares State, Prop, and |=
+   including FLOAT . 
+
+   vars WT SLow SHigh DH DC : Float .
+   var SSignal : Sensorstatus . 
+
+   --- tick burner off
+   rl [tick]: < < Waterstate(WT) , Sensorstate(SSignal, SLow, SHigh) > , Burnerstate(off, DC, DH) > => 
+	      < < Waterstate(WT - (WT * DC)) , Sensorstate(SSignal, SLow, SHigh) > , Burnerstate(off, DC, DH) > .
+
+   --- tick burner om
+   rl [tick]: < < Waterstate(WT) , Sensorstate(SSignal, SLow, SHigh) > , Burnerstate(on, DC, DH) > => 
+	      < < Waterstate(WT + ((100.0 - WT) * DH)) , Sensorstate(SSignal, SLow, SHigh) > , Burnerstate(on, DC, DH) > .
+endm)
+
+(mod CLOCK is
+   including SATISFACTION .  --- declares State, Prop, and |=.
+   including NAT .
+   subsort Nat < State .
+   var ClockCounter : Nat .
+   rl [tick] : ClockCounter => ClockCounter + 1 .
+endm)
+
+(mod CLOCKEDWATERSENSORBURNER is
+    pr WATERSENSORBURNER || CLOCK .
+
+    op init : -> State .
+    eq init = < < < Waterstate(75.0) , Sensorstate(ok, 60.0, 90.0) > , Burnerstate(on,0.1,0.2) > , 0 >  .
+endm)
+
+(smod CLOCKEDWATERSENSORBURNER-STFLOAT is
+  strat atemporal : @ State . 
+  sd atemporal := (ok_to_low | ok_to_high | low_to_ok | high_to_ok )+ .
+
+  strat evolve : @ State .
+  sd evolve := (atemporal ? (atemporal)* : tick)+ . 
+endsm)
+
+(srew init using evolve .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)(next .)
